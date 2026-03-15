@@ -5,14 +5,14 @@
 HTMLファイル1枚で動作し、ブラウザで開くだけで使える。
 
 ## 現在のバージョン / 状態
-v0.0.0 - 設計完了、実装待ち
+v0.1.0 - `index.html` 実装完了、動作確認中
 
 ## 協業ステータス
 - lead: Claude Code
 - executor: Codex
-- phase: design-complete
+- phase: implementation-complete
 - handoff_ready: true
-- updated_at: 2026-03-15 15:00 JST
+- updated_at: 2026-03-15 15:08 JST
 
 ## 設計（Codex向け実装指示）
 
@@ -65,17 +65,18 @@ index.html  ← これ1つだけ
 ## 直近の変更（最新を上に追記）
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-03-15 | `index.html` に現在天気、5日間予報、RainViewer レーダー、再生ボタン、スライダー、凡例、自動更新を実装 | Codex |
 | 2026-03-15 | 設計完了、Issue作成、handoff_ready: true | Claude Code |
 
 ## 次にやること
-- [ ] Issue #1: 天気表示の実装
-- [ ] Issue #2: 雨雲レーダーの実装
+- [ ] ブラウザで `index.html` を開いた目視確認
+- [ ] 必要に応じてレーダーアニメーション速度やズームを微調整
 
 ## 現在の問題
 なし
 
 ## ファイル構成
-- `index.html` - ウィジェット本体（未作成）
+- `index.html` - ウィジェット本体
 - `PROJECT_STATUS.md` - プロジェクト状態管理
 - `CLAUDE.md` - Claude Code用ガイド
 - `AGENTS.md` - Codex用ガイド
@@ -84,6 +85,7 @@ index.html  ← これ1つだけ
 - `index.html` をブラウザで開いて目視確認
 - 天気データが表示されること
 - レーダー地図が表示され、再生・スライダーが動作すること
+- 静的確認: `python3` の `html.parser` で `index.html` をパース
 
 ## デプロイ / リリース方法
 - `index.html` をダブルクリックでブラウザで開く

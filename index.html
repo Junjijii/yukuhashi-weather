@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yukuhashi Weather Widget</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg-1: #0b1020;
+        --bg-2: #131b32;
+        --panel: rgba(30, 30, 40, 0.84);
+        --panel-soft: rgba(255, 255, 255, 0.08);
+        --panel-strong: rgba(255, 255, 255, 0.14);
+        --text: rgba(255, 255, 255, 0.96);
+        --muted: rgba(214, 223, 255, 0.72);
+        --accent: #7dd3fc;
+        --accent-soft: rgba(125, 211, 252, 0.18);
+        --success: #86efac;
+        --danger: #fca5a5;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+          "Hiragino Kaku Gothic ProN", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(125, 211, 252, 0.14), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.18), transparent 32%),
+          linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      }
+
+      .widget {
+        width: min(100%, 380px);
+        padding: 18px;
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid var(--panel-strong);
+        backdrop-filter: blur(24px) saturate(160%);
+        -webkit-backdrop-filter: blur(24px) saturate(160%);
+        box-shadow: var(--shadow);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        margin: 0 0 4px;
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.1;
+      }
+
+      .updated {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        margin-top: 6px;
+        border-radius: 999px;
+        background: var(--success);
+        box-shadow: 0 0 18px rgba(134, 239, 172, 0.8);
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 20px;
+        background: var(--panel-soft);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .now {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .temperature {
+        font-size: 60px;
+        font-weight: 700;
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+      }
+
+      .summary {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .summary strong {
+        color: var(--text);
+        font-size: 18px;
+      }
+
+      .condition {
+        display: grid;
+        place-items: center;
+        gap: 8px;
+        min-height: 132px;
+        text-align: center;
+      }
+
+      .condition-icon {
+        font-size: 40px;
+      }
+
+      .condition-text {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .metric {
+        padding: 12px 10px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: center;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .metric-value {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .forecast-title,
+      .radar-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 18px 2px 10px;
+      }
+
+      .forecast-title h2,
+      .radar-title h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .pill {
+        padding: 5px 9px;
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 11px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .forecast {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+
+      .forecast-day {
+        padding: 12px 8px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: center;
+      }
+
+      .forecast-label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .forecast-icon {
+        margin: 8px 0 6px;
+        font-size: 22px;
+      }
+
+      .forecast-temps {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        font-size: 12px;
+      }
+
+      .forecast-high {
+        font-weight: 700;
+      }
+
+      .forecast-low {
+        color: var(--muted);
+      }
+
+      #radarMap {
+        height: 240px;
+        margin-top: 10px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .radar-controls {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: center;
+        margin-top: 12px;
+      }
+
+      .play-button {
+        width: 42px;
+        height: 42px;
+        border: 0;
+        border-radius: 14px;
+        color: #04111e;
+        font-size: 18px;
+        cursor: pointer;
+        background: linear-gradient(135deg, #7dd3fc, #c4b5fd);
+        box-shadow: 0 12px 24px rgba(17, 24, 39, 0.24);
+      }
+
+      .play-button:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
+
+      .range-wrap {
+        display: grid;
+        gap: 6px;
+      }
+
+      .range-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      .legend {
+        margin-top: 12px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .legend-bar {
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          #1e40af 0%,
+          #2563eb 20%,
+          #22c55e 40%,
+          #facc15 62%,
+          #f97316 82%,
+          #dc2626 100%
+        );
+      }
+
+      .legend-labels {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .message {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 13px;
+        line-height: 1.5;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .message.error {
+        color: #fee2e2;
+        border-color: rgba(252, 165, 165, 0.35);
+        background: rgba(127, 29, 29, 0.2);
+      }
+
+      .message.hidden {
+        display: none;
+      }
+
+      .leaflet-control-attribution,
+      .leaflet-control-zoom {
+        display: none;
+      }
+
+      @media (max-width: 460px) {
+        body {
+          padding: 12px;
+        }
+
+        .widget {
+          width: 100%;
+          padding: 14px;
+        }
+
+        .now {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="widget">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Yukuhashi Live</p>
+          <h1>行橋市 天気ウィジェット</h1>
+          <div class="updated" id="updatedAt">読み込み中...</div>
+        </div>
+        <div class="status-dot" id="statusDot" aria-hidden="true"></div>
+      </header>
+
+      <section class="card now" aria-label="現在の天気">
+        <div>
+          <div class="temperature" id="temperature">--°</div>
+          <div class="summary">
+            <strong id="conditionLine">--</strong><br />
+            <span id="conditionText">天気データを取得しています</span>
+          </div>
+        </div>
+        <div class="condition">
+          <div class="condition-icon" id="conditionIcon">⌛</div>
+          <div class="condition-text">Yukuhashi, Fukuoka</div>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="詳細情報">
+        <div class="metric">
+          <div class="metric-label">湿度</div>
+          <div class="metric-value" id="humidity">--%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">風速</div>
+          <div class="metric-value" id="windSpeed">-- km/h</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">風向</div>
+          <div class="metric-value" id="windDirection">--</div>
+        </div>
+      </section>
+
+      <section aria-label="5日間予報">
+        <div class="forecast-title">
+          <h2>5日間の予報</h2>
+          <span class="pill">10分ごとに更新</span>
+        </div>
+        <div class="forecast" id="forecast"></div>
+      </section>
+
+      <section aria-label="雨雲レーダー">
+        <div class="radar-title">
+          <h2>雨雲レーダー</h2>
+          <span class="pill">5分ごとに更新</span>
+        </div>
+        <div id="radarMap" role="img" aria-label="行橋市周辺の雨雲レーダー"></div>
+        <div class="radar-controls">
+          <button class="play-button" id="playButton" type="button" aria-label="再生">▶</button>
+          <div class="range-wrap">
+            <div class="range-meta">
+              <span id="frameType">フレーム準備中</span>
+              <span id="frameTime">--:--</span>
+            </div>
+            <input id="timeline" type="range" min="0" max="0" step="1" value="0" />
+          </div>
+        </div>
+        <div class="legend" aria-label="雨の強さの凡例">
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span>弱い雨</span>
+            <span>強い雨</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="message hidden" id="messageBox"></div>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const LAT = 33.7289;
+      const LON = 130.9833;
+      const WEATHER_REFRESH_MS = 10 * 60 * 1000;
+      const RADAR_REFRESH_MS = 5 * 60 * 1000;
+      const RADAR_ANIMATION_MS = 900;
+
+      const weatherEls = {
+        updatedAt: document.getElementById("updatedAt"),
+        temperature: document.getElementById("temperature"),
+        conditionLine: document.getElementById("conditionLine"),
+        conditionText: document.getElementById("conditionText"),
+        conditionIcon: document.getElementById("conditionIcon"),
+        humidity: document.getElementById("humidity"),
+        windSpeed: document.getElementById("windSpeed"),
+        windDirection: document.getElementById("windDirection"),
+        forecast: document.getElementById("forecast"),
+        statusDot: document.getElementById("statusDot"),
+        messageBox: document.getElementById("messageBox"),
+      };
+
+      const radarEls = {
+        playButton: document.getElementById("playButton"),
+        timeline: document.getElementById("timeline"),
+        frameType: document.getElementById("frameType"),
+        frameTime: document.getElementById("frameTime"),
+      };
+
+      let map;
+      let radarLayer = null;
+      let radarHost = "";
+      let radarFrames = [];
+      let currentFrameIndex = 0;
+      let animationTimer = null;
+
+      const weatherCodeMap = {
+        0: ["☀️", "快晴"],
+        1: ["🌤️", "晴れ"],
+        2: ["⛅", "晴れ時々くもり"],
+        3: ["☁️", "くもり"],
+        45: ["🌫️", "霧"],
+        48: ["🌫️", "着氷性の霧"],
+        51: ["🌦️", "弱い霧雨"],
+        53: ["🌦️", "霧雨"],
+        55: ["🌧️", "強い霧雨"],
+        56: ["🌧️", "着氷性の弱い霧雨"],
+        57: ["🌧️", "着氷性の強い霧雨"],
+        61: ["🌦️", "弱い雨"],
+        63: ["🌧️", "雨"],
+        65: ["🌧️", "強い雨"],
+        66: ["🌧️", "着氷性の弱い雨"],
+        67: ["🌧️", "着氷性の強い雨"],
+        71: ["🌨️", "弱い雪"],
+        73: ["🌨️", "雪"],
+        75: ["❄️", "強い雪"],
+        77: ["❄️", "霰"],
+        80: ["🌦️", "にわか雨"],
+        81: ["🌧️", "強いにわか雨"],
+        82: ["⛈️", "激しいにわか雨"],
+        85: ["🌨️", "にわか雪"],
+        86: ["❄️", "強いにわか雪"],
+        95: ["⛈️", "雷雨"],
+        96: ["⛈️", "雷雨と雹"],
+        99: ["⛈️", "激しい雷雨と雹"],
+      };
+
+      function getWeatherPresentation(code) {
+        return weatherCodeMap[code] || ["❔", "天気不明"];
+      }
+
+      function showMessage(text, isError = false) {
+        weatherEls.messageBox.textContent = text;
+        weatherEls.messageBox.className = `message${isError ? " error" : ""}`;
+      }
+
+      function hideMessage() {
+        weatherEls.messageBox.className = "message hidden";
+        weatherEls.messageBox.textContent = "";
+      }
+
+      function setStatus(ok) {
+        weatherEls.statusDot.style.background = ok ? "var(--success)" : "var(--danger)";
+        weatherEls.statusDot.style.boxShadow = ok
+          ? "0 0 18px rgba(134, 239, 172, 0.8)"
+          : "0 0 18px rgba(252, 165, 165, 0.8)";
+      }
+
+      function toWindDirection(degrees) {
+        const directions = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
+        const normalized = ((degrees % 360) + 360) % 360;
+        return directions[Math.round(normalized / 45) % directions.length];
+      }
+
+      function formatUpdateText(date = new Date()) {
+        return `最終更新 ${new Intl.DateTimeFormat("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(date)}`;
+      }
+
+      function formatForecastDay(dateText) {
+        const date = new Date(`${dateText}T00:00:00+09:00`);
+        return new Intl.DateTimeFormat("ja-JP", {
+          weekday: "short",
+          month: "numeric",
+          day: "numeric",
+        }).format(date);
+      }
+
+      function formatFrameTime(unixSeconds) {
+        const date = new Date(unixSeconds * 1000);
+        return new Intl.DateTimeFormat("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(date);
+      }
+
+      function renderForecast(daily) {
+        const days = daily.time.slice(1, 6).map((dateText, index) => {
+          const [icon] = getWeatherPresentation(daily.weather_code[index + 1]);
+          return {
+            label: formatForecastDay(dateText),
+            icon,
+            high: Math.round(daily.temperature_2m_max[index + 1]),
+            low: Math.round(daily.temperature_2m_min[index + 1]),
+          };
+        });
+
+        weatherEls.forecast.innerHTML = days
+          .map(
+            (day) => `
+              <article class="forecast-day">
+                <div class="forecast-label">${day.label}</div>
+                <div class="forecast-icon">${day.icon}</div>
+                <div class="forecast-temps">
+                  <span class="forecast-high">${day.high}°</span>
+                  <span class="forecast-low">${day.low}°</span>
+                </div>
+              </article>
+            `
+          )
+          .join("");
+      }
+
+      async function loadWeather() {
+        const url =
+          "https://api.open-meteo.com/v1/forecast?" +
+          new URLSearchParams({
+            latitude: LAT,
+            longitude: LON,
+            current: [
+              "temperature_2m",
+              "relative_humidity_2m",
+              "weather_code",
+              "wind_speed_10m",
+              "wind_direction_10m",
+            ].join(","),
+            daily: ["weather_code", "temperature_2m_max", "temperature_2m_min"].join(","),
+            timezone: "Asia/Tokyo",
+            forecast_days: "6",
+          });
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("天気データの取得に失敗しました。");
+        }
+
+        const data = await response.json();
+        const [icon, label] = getWeatherPresentation(data.current.weather_code);
+
+        weatherEls.temperature.textContent = `${Math.round(data.current.temperature_2m)}°`;
+        weatherEls.conditionLine.textContent = `${icon} ${label}`;
+        weatherEls.conditionText.textContent = "福岡県行橋市の現在の空模様";
+        weatherEls.conditionIcon.textContent = icon;
+        weatherEls.humidity.textContent = `${Math.round(data.current.relative_humidity_2m)}%`;
+        weatherEls.windSpeed.textContent = `${Math.round(data.current.wind_speed_10m)} km/h`;
+        weatherEls.windDirection.textContent = `${Math.round(data.current.wind_direction_10m)}° ${toWindDirection(data.current.wind_direction_10m)}`;
+        weatherEls.updatedAt.textContent = formatUpdateText();
+        renderForecast(data.daily);
+      }
+
+      function ensureMap() {
+        if (map) {
+          return;
+        }
+
+        map = L.map("radarMap", {
+          attributionControl: false,
+          zoomControl: false,
+        }).setView([LAT, LON], 8);
+
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
+          maxZoom: 18,
+        }).addTo(map);
+
+        L.circleMarker([LAT, LON], {
+          radius: 6,
+          color: "#e0f2fe",
+          weight: 2,
+          fillColor: "#7dd3fc",
+          fillOpacity: 0.9,
+        })
+          .addTo(map)
+          .bindTooltip("行橋市", {
+            permanent: false,
+            direction: "top",
+            offset: [0, -6],
+          });
+      }
+
+      function stopAnimation() {
+        if (animationTimer) {
+          window.clearInterval(animationTimer);
+          animationTimer = null;
+        }
+        radarEls.playButton.textContent = "▶";
+        radarEls.playButton.setAttribute("aria-label", "再生");
+      }
+
+      function buildRadarTileUrl(frame) {
+        return `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+      }
+
+      function renderRadarFrame(index) {
+        if (!radarFrames.length) {
+          return;
+        }
+
+        currentFrameIndex = Math.max(0, Math.min(index, radarFrames.length - 1));
+        radarEls.timeline.value = String(currentFrameIndex);
+
+        const frame = radarFrames[currentFrameIndex];
+        if (radarLayer) {
+          map.removeLayer(radarLayer);
+        }
+        radarLayer = L.tileLayer(buildRadarTileUrl(frame), {
+          opacity: 0.78,
+          tileSize: 256,
+          zIndex: 10,
+        }).addTo(map);
+
+        radarEls.frameType.textContent = frame.kind === "nowcast" ? "予測フレーム" : "観測フレーム";
+        radarEls.frameTime.textContent = formatFrameTime(frame.time);
+      }
+
+      async function loadRadar() {
+        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        if (!response.ok) {
+          throw new Error("レーダーデータの取得に失敗しました。");
+        }
+
+        const data = await response.json();
+        radarHost = data.host;
+        const past = (data.radar?.past || []).map((frame) => ({ ...frame, kind: "past" }));
+        const nowcast = (data.radar?.nowcast || []).map((frame) => ({ ...frame, kind: "nowcast" }));
+        radarFrames = [...past, ...nowcast];
+
+        if (!radarFrames.length) {
+          throw new Error("利用できるレーダーフレームがありません。");
+        }
+
+        radarEls.timeline.max = String(radarFrames.length - 1);
+        const newestIndex = radarFrames.length - 1;
+        renderRadarFrame(newestIndex);
+        radarEls.playButton.disabled = false;
+      }
+
+      function toggleAnimation() {
+        if (!radarFrames.length) {
+          return;
+        }
+
+        if (animationTimer) {
+          stopAnimation();
+          return;
+        }
+
+        radarEls.playButton.textContent = "⏸";
+        radarEls.playButton.setAttribute("aria-label", "停止");
+        animationTimer = window.setInterval(() => {
+          const nextIndex = (currentFrameIndex + 1) % radarFrames.length;
+          renderRadarFrame(nextIndex);
+        }, RADAR_ANIMATION_MS);
+      }
+
+      async function refreshAll() {
+        try {
+          await loadWeather();
+          await loadRadar();
+          hideMessage();
+          setStatus(true);
+        } catch (error) {
+          console.error(error);
+          showMessage(error.message || "データの取得に失敗しました。ネットワークを確認してください。", true);
+          setStatus(false);
+        }
+      }
+
+      function startTimers() {
+        window.setInterval(async () => {
+          try {
+            await loadWeather();
+            hideMessage();
+            setStatus(true);
+          } catch (error) {
+            console.error(error);
+            showMessage("天気データの更新に失敗しました。", true);
+            setStatus(false);
+          }
+        }, WEATHER_REFRESH_MS);
+
+        window.setInterval(async () => {
+          try {
+            const wasPlaying = Boolean(animationTimer);
+            stopAnimation();
+            await loadRadar();
+            if (wasPlaying) {
+              toggleAnimation();
+            }
+            hideMessage();
+            setStatus(true);
+          } catch (error) {
+            console.error(error);
+            showMessage("レーダーデータの更新に失敗しました。", true);
+            setStatus(false);
+          }
+        }, RADAR_REFRESH_MS);
+      }
+
+      radarEls.playButton.addEventListener("click", toggleAnimation);
+      radarEls.playButton.disabled = true;
+
+      radarEls.timeline.addEventListener("input", (event) => {
+        stopAnimation();
+        renderRadarFrame(Number(event.target.value));
+      });
+
+      ensureMap();
+      refreshAll();
+      startTimers();
+    </script>
+  </body>
+</html>
