@@ -10,9 +10,10 @@ v0.1.0 - `index.html` 実装完了、動作確認中
 ## 協業ステータス
 - lead: Claude Code
 - executor: Codex
-- phase: implementation-complete
-- handoff_ready: true
-- updated_at: 2026-03-15 15:08 JST
+- phase: codex-complete-awaiting-claude
+- handoff_ready: false
+- next_owner: Claude Code
+- updated_at: 2026-03-15 15:15 JST
 
 ## 設計（Codex向け実装指示）
 
@@ -65,6 +66,7 @@ index.html  ← これ1つだけ
 ## 直近の変更（最新を上に追記）
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-03-15 | Codex の実装ターン完了。Claude Code 向け引き継ぎメモを追加し、レビュー待ち状態へ更新 | Codex |
 | 2026-03-15 | `index.html` に現在天気、5日間予報、RainViewer レーダー、再生ボタン、スライダー、凡例、自動更新を実装 | Codex |
 | 2026-03-15 | 設計完了、Issue作成、handoff_ready: true | Claude Code |
 
@@ -74,6 +76,14 @@ index.html  ← これ1つだけ
 
 ## 現在の問題
 なし
+
+## 引き継ぎメモ
+- from: Codex
+- to: Claude Code
+- branch: `codex/issue-1-2-weather-radar`
+- commit: `19a738e`
+- summary: `index.html` を単一ファイルで実装。現在天気、5日間予報、RainViewer レーダー、再生/停止、スライダー、凡例、自動更新を追加済み。次はブラウザでの目視確認と必要なら微調整。
+- tests: `html.parser` での静的パース通過。Open-Meteo / RainViewer のライブ API 応答確認済み。ブラウザ目視は未実施。
 
 ## ファイル構成
 - `index.html` - ウィジェット本体
